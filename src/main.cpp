@@ -1,8 +1,8 @@
 #include <iostream>
 #include <asio.hpp>
 
-#include <asio/co_spawn.hpp>
-#include <asio/ip/tcp.hpp>
+//#include <asio/co_spawn.hpp>
+//#include <asio/ip/tcp.hpp>
 
 using asio::io_context;
 using asio::awaitable;
@@ -14,7 +14,21 @@ namespace this_coro = asio::this_coro;
 
 using namespace std;
 
-awaitable<void> listener()
+awaitable<void> timer_test()
+{
+    auto executor = co_await this_coro::executor;
+
+    for (int i = 0; i < 10; i++)
+    {
+        cout << "Waiting event " << i << endl;
+
+        asio::steady_timer t(executor, 2s);
+
+        co_await t.async_wait(asio::use_awaitable);
+    }
+}
+
+awaitable<void> receiver()
 {
     auto executor = co_await this_coro::executor;
 
@@ -40,7 +54,9 @@ int main()
 
         io_context ctx;
 
-        co_spawn(ctx, listener(), detached);
+        co_spawn(ctx, timer_test(), detached);
+
+        co_spawn(ctx, receiver(), detached);
 
         ctx.run();
     }
