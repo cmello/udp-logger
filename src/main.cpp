@@ -81,11 +81,12 @@ awaitable<void> receiver()
     receive_buffer_type receive_buffer;
     buffered_file<receive_buffer_type> buffered_file(executor, "udp_traffic.bin");
 
+    auto socket = asio::ip::udp::socket(executor, asio::ip::udp::endpoint(asio::ip::udp::v4(), 20777));
+
     while(true)
     {
         asio::ip::udp::endpoint sender_endpoint;
 
-        auto socket = asio::ip::udp::socket(executor, asio::ip::udp::endpoint(asio::ip::udp::v4(), 20777));
         
         // continues after either of the events below happen (|| operator implements that composition of async events)
         auto result = co_await(
@@ -102,8 +103,15 @@ awaitable<void> receiver()
                 {
                     // first event happened: received data. add to disk buffer until we have enough to fill a disk write.
                     auto received_count = std::get<0>(result);
-                    //cout << "received: " << received_count << endl;
-                    co_await buffered_file.write_async(receive_buffer, received_count);
+                    if (received_count > 0)
+                    {
+                        //cout << "received: " << received_count << endl;
+                        co_await buffered_file.write_async(receive_buffer, received_count);
+                    }
+                    else
+                    {
+                        cout << "ERROR: received_count = " << received_count << endl;
+                    }
                     break;
                 }
                 case 1:
